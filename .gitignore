@@ -1,0 +1,17 @@
+# Environments
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# Database
+*.db
+aria_memory.db
+
+# OS
+.DS_Store
+Thumbs.db
