@@ -1,100 +1,102 @@
-# Aria Voice Companion 🎙️✨
-
 <div align="center">
-  <img src="https://img.shields.io/badge/Python-3.13-blue.svg?style=for-the-badge&logo=python" alt="Python" />
-  <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI" />
-  <img src="https://img.shields.io/badge/Groq-API-f55036?style=for-the-badge" alt="Groq API" />
-  <img src="https://img.shields.io/badge/Llama_3-8A2BE2?style=for-the-badge" alt="Llama 3" />
-  <img src="https://img.shields.io/badge/JS_Vanilla-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="Vanilla JS" />
+  <br>
+  <!-- Beautiful Audio Wave / Glowing Orb representation -->
+  <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHhicWFjcWNvMndzbDFocDNxZm4xcHF3czMweHU1cnpva2Y3bTkybCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/27L5Yz2bP2w3rtFdxH/giphy.gif" alt="Aria Audio Wave" width="250" style="border-radius: 50%; box-shadow: 0 0 50px rgba(100, 200, 255, 0.4);"/>
+  <br><br>
+
+  # 🎙️ Aria: The Empathetic Voice Companion  
+  *Ultra-fast. Emotionally aware. Multi-lingual.*
+
+  <p align="center">
+    <a href="#"><img src="https://img.shields.io/badge/Python-3.13-blue.svg?style=for-the-badge&logo=python&color=0c0c0e" alt="Python" /></a>
+    <a href="#"><img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&color=0c0c0e" alt="FastAPI" /></a>
+    <a href="#"><img src="https://img.shields.io/badge/Groq%20LPU-Ultra%20Fast-f55036?style=for-the-badge&color=0c0c0e" alt="Groq API" /></a>
+    <a href="#"><img src="https://img.shields.io/badge/Llama_3-7B-8A2BE2?style=for-the-badge&color=0c0c0e" alt="Llama 3" /></a>
+  </p>
+
+  <sub>Built with ❤️ combining <b>Vanilla JS</b>, <b>Orpheus TTS</b>, and <b>WebSockets</b> for sub-second, real-time interactions.</sub>
 </div>
 
-<br>
+---
 
-**Aria** is an ultra-fast, multi-language conversational AI voice companion. Designed to feel human, Aria leverages Groq for near-instant inference with Llama-3, WebSockets for fluid real-time communication, and a hybrid Text-to-Speech (TTS) engine powered by **Orpheus** (via Groq) and **Edge-TTS**.
+## ✨ Why Aria?
 
-Featuring a premium, minimalist neo-brutalist UI, Aria understands human emotions and adapts her voice and interface colors in real-time based on the flow of the conversation.
+**Aria is not just another chatbot.** She is designed to feel alive.  
+Using **Groq's hyper-fast Llama-3**, she listens to you, reads the context, naturally anticipates your mood, and changes her **voice, tone, and the entire app's visual colors** dynamically based on the emotion of the conversation.
+
+<p align="center">
+  <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWJ5ZDRibmxpZzhkZWVxNDE0M2E4MzMwNXE2b2ZrcGoxdWg5YWtyOSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/l3vR1v87J9R19sLgk/giphy.gif" alt="AI Ambient Light" width="100%" style="border-radius:24px; box-shadow: 0 0 30px rgba(0,0,0,0.5);" />
+</p>
+
+## 🚀 Key Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3>🧠 Emotional Intelligence</h3>
+      <p>Aria implements internal arc tracking. If you are sad, the UI turns a soft indigo, and her voice lowers in pitch and pace. If you are excited, the UI glows pink and she speaks enthusiastically.</p>
+    </td>
+    <td width="50%">
+      <h3>⚡ Blazing Fast Architecture</h3>
+      <p>Achieves sub-second vocal response latency using Groq's LPU layer and direct WebSocket <code>ArrayBuffer</code> streaming straight to the browser's audio context.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>🌍 Seamless Bilingualism</h3>
+      <p>Switch between a native 🇺🇸 <b>English</b> persona and a natural 🇸🇦 <b>Arabic (Saudi)</b> persona instantly. The UI mirrors this by automatically transitioning from LTR to RTL formatting.</p>
+    </td>
+    <td width="50%">
+      <h3>📱 Native Telegram App</h3>
+      <p>Aria lives outside the browser too! A fully decoupled async Telegram Bot (<code>telegram_bot.py</code>) allows you to send her text or voice messages on the go and receive high-fidelity voice notes back.</p>
+    </td>
+  </tr>
+</table>
+
+## 🎨 The "Old Money" Aesthetic 
+
+Aria features a **neo-brutalist / old-money** UI inspired by luxury fluid design:
+- 🚫 **Zero Bloat:** No React, No Tailwind. Pure Vanilla CSS3 mastery.
+- 🌌 **Ambient Lighting:** Generative, shape-shifting localized glows mimic Aria's core engine breathing in the background.
+- ✨ **Haptic Visuals:** Elements pop and fade seamlessly with 60fps glass-morphism animations.
 
 ---
 
-## 🚀 Features
+## ⚙️ Getting Started
 
-- **Blazing Fast AI:** Utilizes Groq's LPU inference engine to achieve sub-second response times using `llama3-8b-8192`.
-- **Hybrid TTS Engine:** High-fidelity human voices via CanopyLabs' Orpheus models (`orpheus-v1-english` & `orpheus-arabic-saudi`), with an automatic fallback to Edge-TTS.
-- **Dynamic Emotion Tracking:** Aria infers the emotional context of the conversation and visually reflects it by changing the UI theme (colors, badges, waveforms) and her tone of voice.
-- **Bilingual (English & Arabic):** Full support for switching personas and languages on the fly via the settings modal. 
-- **Session Memory:** Stores complete conversation history locally in SQLite, retaining context per user session.
-- **Native Telegram Bot:** Includes a fully functional Telegram bot (`telegram_bot.py`) that mirrors Aria's core brain and replies via high-quality voice notes.
-- **Secure & Local API Keys:** Bring-Your-Own-Key (BYOK). Users can inject their own Groq API keys locally inside the browser without exposing them to the backend server.
-
----
-
-## 🛠 Tech Stack
-
-### Backend
-- **Python 3.13** + **FastAPI**
-- **WebSockets** (Real-time duplex streaming)
-- **SQLite** (Session/Memory management)
-- **python-telegram-bot** (Telegram Integration)
-
-### Frontend
-- **Vanilla JavaScript** (Zero bloated frameworks)
-- **Web Speech API & MediaRecorder** (Client-side STT options)
-- **CSS3 Variables & Animations** (Dynamic Emotion Theming)
-
----
-
-## ⚙️ Installation & Usage
-
-### 1. Requirements
-- Python 3.10+ (Tested on 3.13)
-- A [Groq API Key](https://console.groq.com/)
-- A Telegram Bot Token from [@BotFather](https://t.me/BotFather) (Optional)
-
-### 2. Setup
-Clone the repository and install the dependencies:
-
+### 1️⃣ Clone & Install
 ```bash
 git clone https://github.com/mohasbks/Aria-Voice-Companion.git
 cd Aria-Voice-Companion/backend
 pip install -r requirements.txt
 ```
 
-### 3. Environment Variables
-Create a `.env` file inside the root directory and populate it:
-
+### 2️⃣ Environment Variables (`.env`)
+You retain total control over your API keys (Keys can also be injected securely via the Frontend Interface):
 ```env
-GROQ_API_KEY=gsk_your_default_english_key_here
+GROQ_API_KEY=gsk_your_english_key_here
 GROQ_API_KEY_ARABIC=gsk_your_arabic_key_here
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
 ```
 
-### 4. Running the Web App
-Start the FastAPI Uvicorn server:
+### 3️⃣ Ignite the Engines 🚀
+Fire up the **FastAPI Web Server**:
 ```bash
 cd backend
 python main.py
 ```
-Open your browser and navigate to `http://localhost:8000`
-
-### 5. Running the Telegram Bot
-To run the companion bot on Telegram in parallel:
+Fire up the **Telegram Bot** (optional, in a new terminal):
 ```bash
-cd backend
 python telegram_bot.py
 ```
+> **Access the App:** Open `http://localhost:8000` in your web browser.
 
 ---
 
-## 🎨 UI Showcase
+## 🔮 Roadmap / Next Steps
+- [ ] Implement VAD (Voice Activity Detection) for interruption handling.
+- [ ] Support LLM Vision (Image sharing on Telegram).
+- [ ] Expanded Memory via Vector DB for long-term recall.
 
-The web interface is built using a dark, sleek design that reacts to Aria's mood. If you insult her, the screen turns cold and indigo; if you joke with her, the screen warms up to vibrant pinks and golds.
-
-*(Wait for the audio wave animations while she generates the voice response!)*
-
----
-
-## 📝 License
-This project is open-source and available under the MIT License. Feel free to fork, modify, and integrate into your own SaaS tools!
-
----
-*Built with ❤️ for real-time human-AI interaction.*
+<br>
+<h3 align="center">Made by a developer, for developers. Enjoy solving the silence. 🌙</h3>
