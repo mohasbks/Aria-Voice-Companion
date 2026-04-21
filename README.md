@@ -1,7 +1,7 @@
 <div align="center">
   <br>
   <!-- Beautiful Audio Wave / Glowing Orb representation -->
-  <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHhicWFjcWNvMndzbDFocDNxZm4xcHF3czMweHU1cnpva2Y3bTkybCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/27L5Yz2bP2w3rtFdxH/giphy.gif" alt="Aria Audio Wave" width="250" style="border-radius: 50%; box-shadow: 0 0 50px rgba(100, 200, 255, 0.4);"/>
+  <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=800&auto=format&fit=crop" alt="Aria Audio Wave" width="600" style="border-radius: 24px; box-shadow: 0 0 50px rgba(100, 200, 255, 0.4);"/>
   <br><br>
 
   # 🎙️ Aria: The Empathetic Voice Companion  
