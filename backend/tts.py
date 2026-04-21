@@ -44,14 +44,14 @@ RATE_LIMIT_COOLDOWN = 120           # seconds to wait after any 429
 # ── Emotion → Voice Mapping ────────────────────────────────────────────────
 # Orpheus English voices: autumn, diana, hannah, austin, daniel, troy
 ORPHEUS_MAP = {
-    "calm":      {"voice": "diana"},
-    "happy":     {"voice": "diana"},
+    "calm":      {"voice": "hannah"},
+    "happy":     {"voice": "hannah"},
     "excited":   {"voice": "hannah"},
-    "sad":       {"voice": "autumn"},
-    "serious":   {"voice": "diana"},
-    "angry":     {"voice": "diana"},
+    "sad":       {"voice": "hannah"},
+    "serious":   {"voice": "hannah"},
+    "angry":     {"voice": "hannah"},
     "playful":   {"voice": "hannah"},
-    "curious":   {"voice": "diana"},
+    "curious":   {"voice": "hannah"},
     "surprised": {"voice": "hannah"},
 }
 

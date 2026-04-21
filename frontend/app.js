@@ -29,8 +29,12 @@ let ws            = null;
 let reconnectCount = 0;
 let isConnected   = false;
 
-// Session
-const sessionId   = `session_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+// Session setup - Persist session ID to maintain memory across reloads
+let sessionId = localStorage.getItem('aria_session_id');
+if (!sessionId) {
+  sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  localStorage.setItem('aria_session_id', sessionId);
+}
 
 // Input mode: 'webspeech' | 'groq'
 let inputMode     = 'webspeech';
@@ -262,22 +266,74 @@ function applyEmotionTheme(emotion) {
 }
 
 /* ══════════════════════════════════════════════════════════════
+   WEB AUDIO VISUALIZER
+   ══════════════════════════════════════════════════════════════ */
+const canvas = document.getElementById('audio-visualizer');
+const canvasCtx = canvas.getContext('2d');
+let audioCtx = null;
+let analyser = null;
+let mediaNode = null;
+
+function initVisualizer() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  
+  mediaNode = audioCtx.createMediaElementSource(aiAudio);
+  mediaNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+  
+  analyser.fftSize = 256;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+  
+  function draw() {
+    requestAnimationFrame(draw);
+    
+    // Auto-resize canvas to fill chat window
+    if (canvas.width !== canvas.offsetWidth) canvas.width = canvas.offsetWidth;
+    if (canvas.height !== canvas.offsetHeight) canvas.height = canvas.offsetHeight;
+    
+    analyser.getByteFrequencyData(dataArray);
+    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const barWidth = (canvas.width / bufferLength) * 2;
+    let x = 0;
+    
+    const hue = getComputedStyle(document.documentElement).getPropertyValue('--emotion-h').trim() || 200;
+    
+    for(let i = 0; i < bufferLength; i++) {
+      const barHeight = dataArray[i] * (canvas.height / 256);
+      
+      // Floating glowing bars anchored to the bottom
+      canvasCtx.fillStyle = `hsla(${hue}, 70%, 65%, ${(dataArray[i]/255) * 0.8})`;
+      
+      // Draw smooth rounded rect for bars
+      canvasCtx.beginPath();
+      canvasCtx.roundRect(x, canvas.height - barHeight, barWidth - 2, barHeight, [10, 10, 0, 0]);
+      canvasCtx.fill();
+      
+      x += barWidth;
+    }
+  }
+  draw();
+}
+
+/* ══════════════════════════════════════════════════════════════
    AUDIO PLAYBACK
    ══════════════════════════════════════════════════════════════ */
 
 function playCollectedAudio(chunks, emotion) {
   if (!chunks || chunks.length === 0) return;
 
-  // Merge all chunks into a single Uint8Array
   const totalLen = chunks.reduce((s, c) => s + c.length, 0);
   const merged = new Uint8Array(totalLen);
   let offset = 0;
   for (const c of chunks) { merged.set(c, offset); offset += c.length; }
 
-  // Auto-detect format: WAV starts with "RIFF"; otherwise assume MP3
   let mimeType = 'audio/mpeg';
   if (merged[0] === 0x52 && merged[1] === 0x49 && merged[2] === 0x46 && merged[3] === 0x46) {
-    mimeType = 'audio/wav';  // Orpheus / Kokoro output
+    mimeType = 'audio/wav';
   }
 
   const blob = new Blob([merged], { type: mimeType });
@@ -285,6 +341,10 @@ function playCollectedAudio(chunks, emotion) {
 
   aiAudio.pause();
   aiAudio.src = url;
+
+  // Initialize visualizer context on first play
+  initVisualizer();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 
   // Show speaking waveform on last assistant message
   const lastMsg = document.querySelector('.message.assistant:last-child');
@@ -724,5 +784,22 @@ setInterval(() => {
    BOOT
    ══════════════════════════════════════════════════════════════ */
 
+async function loadHistory() {
+  try {
+    const res = await fetch(`/history/${sessionId}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.messages && data.messages.length > 0) {
+      if (welcomeCard) welcomeCard.style.display = 'none';
+      data.messages.forEach(m => {
+        // Only append text initially, no emotion since history endpoint only returns role/content
+        appendMessage(m.role, m.content); 
+      });
+    }
+  } catch (err) {
+    console.warn("Failed to load history:", err);
+  }
+}
+
 updatePlaceholderByLang();
-connectWS();
+loadHistory().then(connectWS);

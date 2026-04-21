@@ -252,9 +252,19 @@ body::after {
 }
 
 /* ── Messages ──────────────────────────────────────────── */
+.audio-visualizer {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  transition: opacity 0.5s ease;
+}
+
 .message {
   display: flex; gap: 16px; max-width: 85%;
   animation: fadeUp 0.6s var(--ease-out) both;
+  z-index: 1;
 }
 .message.user { align-self: flex-end; flex-direction: row-reverse; }
 .message.assistant { align-self: flex-start; }
@@ -276,21 +286,26 @@ body::after {
 .msg-bubble {
   font-size: 1.05rem; line-height: 1.6; font-weight: 300; color: #fff;
   letter-spacing: 0.01em;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 .message.user .msg-bubble {
-  background: rgba(255,255,255,0.03); 
+  background: rgba(255, 255, 255, 0.05); 
   padding: 14px 24px; 
-  border-radius: 24px 24px 4px 24px;
-  border: 1px solid var(--border-light);
-  color: rgba(255,255,255,0.85);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  border-radius: 20px 20px 4px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 .message.assistant .msg-bubble {
-  padding: 4px 0; 
-  /* Assistant uses the serif font for a "wise/elegant" voice presence */
+  padding: 8px 16px; 
+  background: rgba(var(--emotion-h), 50%, 50%, 0.03);
+  border-radius: 4px 20px 20px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   font-family: var(--font-serif);
   font-size: 1.15rem;
   color: var(--text-main);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Assistant Speaking Indicator (replaces avatar glow) */
