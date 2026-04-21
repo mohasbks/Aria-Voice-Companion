@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aria</title>
+  <meta name="description" content="A minimalist AI voice companion" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+
+    <!-- ── Minimalist Sidebar ── -->
+    <aside class="sidebar">
+      <!-- Brand -->
+      <div class="brand">
+        Aria <div class="brand-dot"></div>
+      </div>
+
+      <!-- Network / Status -->
+      <div class="sidebar-section">
+        <span class="sidebar-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+          Network
+        </span>
+        <div class="status-row">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-label">Connecting</span>
+        </div>
+        <div class="session-info" id="session-display">—</div>
+      </div>
+
+      <!-- Input Mode -->
+      <div class="sidebar-section">
+        <span class="sidebar-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+          Input Mode
+        </span>
+        <div class="mode-group" id="mode-group">
+          <button class="toggle-btn active" id="btn-webspeech" data-mode="webspeech">Browser Web Speech</button>
+          <button class="toggle-btn" id="btn-groq" data-mode="groq">Groq Whisper STT</button>
+        </div>
+      </div>
+
+      <!-- Live Emotion -->
+      <div class="sidebar-section">
+        <span class="sidebar-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          Current State
+        </span>
+        <div class="live-emotion-badge" id="live-emotion-badge">
+          <span id="live-emotion-icon">😌</span>
+          <span id="live-emotion-name">calm</span>
+        </div>
+      </div>
+
+      <!-- We keep emotion-arc container hidden/minimal for data mapping if needed by app.js, 
+           or just hidden to avoid clutter. Let's make it almost invisible. -->
+      <div id="emotion-arc-dots" style="display: none;"></div>
+
+      <div class="sidebar-bottom-actions">
+        <button class="settings-btn" id="settings-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+        <button class="clear-btn" id="clear-btn">Clear Conversation</button>
+      </div>
+    </aside>
+
+    <!-- ── Main Area ── -->
+    <main class="main-area">
+
+      <!-- Conversation Window -->
+      <div class="chat-window" id="chat-window">
+        <!-- Welcome Screen -->
+        <div class="welcome-card" id="welcome-card">
+          <div class="core-orb" id="welcome-orb"></div>
+          <h2>How can I help you today?</h2>
+          <div class="welcome-tips">
+            <button class="tip">"I'm feeling stressed"</button>
+            <button class="tip">"Tell me a joke"</button>
+            <button class="tip">"Sing a song"</button>
+          </div>
+        </div>
+        <!-- Messages injected here -->
+      </div>
+
+      <!-- Floating Input Area -->
+      <div class="floating-input-wrapper">
+        
+        <!-- Activity & Transcript floating above bar -->
+        <div class="activity-bar" id="activity-bar">
+          <div class="activity-inner" id="activity-inner">
+            <div class="wave-bars" id="wave-bars" style="display:none;">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <span class="activity-text" id="activity-text"></span>
+          </div>
+        </div>
+
+        <div class="transcript-pill" id="transcript-pill">
+          <span id="interim-text" class="interim"></span>
+        </div>
+
+        <div class="floating-input-bar">
+          <input type="text" id="text-input" class="text-input" placeholder="Message Aria..." autocomplete="off" />
+          
+          <button class="send-btn" id="send-btn" title="Send message">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+            </svg>
+          </button>
+          
+          <div class="divider"></div>
+          
+          <button class="mic-btn" id="mic-btn" title="Start recording">
+            <div class="mic-glow"></div>
+            <div class="mic-icon">
+              <!-- Mic icon -->
+              <svg id="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+              <!-- Stop icon -->
+              <svg id="icon-stop" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <rect x="6" y="6" width="12" height="12" rx="2" />
+              </svg>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <audio id="ai-audio" style="display:none"></audio>
+  <div class="toast-container" id="toast-container"></div>
+  
+  <!-- ── Settings Modal ── -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Preferences</h2>
+        <button class="close-btn" id="close-settings-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-group">
+          <label>Language & Persona</label>
+          <div class="lang-toggle">
+            <button class="lang-btn active" data-lang="en">🇺🇸 English</button>
+            <button class="lang-btn" data-lang="ar">🇸🇦 Arabic</button>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <label>Groq API Key (English)</label>
+          <input type="password" id="groq-key-input" placeholder="gsk_..." />
+          <span class="setting-hint">Used for fast Whisper STT + Llama inference.</span>
+        </div>
+
+        <div class="setting-group">
+          <label>Groq API Key (Arabic)</label>
+          <input type="password" id="groq-key-ar-input" placeholder="gsk_..." />
+          <span class="setting-hint">Used if you want a separate account for Arabic TTS.</span>
+        </div>
+        
+        <div class="setting-group">
+          <label>Telegram Bot Integration</label>
+          <span class="setting-hint">Bot is running! Search your bot on Telegram and begin chatting.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="save-btn" id="save-settings-btn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
