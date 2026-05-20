@@ -25,6 +25,7 @@ Protocol (client → server):
 """
 
 import json
+import re
 import logging
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -110,22 +111,28 @@ async def _run_pipeline(
     ai_text  = result["text"]
     emotion  = result["emotion"]
 
-    # 4. Persist both turns
-    save_message("user",      user_text, emotion="neutral", session_id=session_id)
-    save_message("assistant", ai_text,   emotion=emotion,   session_id=session_id)
+    # Strip Orpheus tags for clean display text (keep orignal for TTS)
+    _ORPHEUS_TAG_RE = re.compile(r'<(laugh|chuckle|sigh|gasp|sniffle|groan|cry|cough|yawn)>', re.IGNORECASE)
+    display_text = _ORPHEUS_TAG_RE.sub('', ai_text).strip()
+    # Collapse double spaces left after tag removal
+    display_text = re.sub(r'  +', ' ', display_text)
 
-    # 5. Send text response (UI shows this while audio loads)
+    # 4. Persist both turns (store clean text in memory)
+    save_message("user",      user_text,    emotion="neutral", session_id=session_id)
+    save_message("assistant", display_text, emotion=emotion,   session_id=session_id)
+
+    # 5. Send CLEAN text to UI, full tagged text goes to TTS
     new_arc = get_emotion_arc(n=5, session_id=session_id)
     await _send(ws, {
         "type":    "response",
-        "text":    ai_text,
+        "text":    display_text,   # ← clean, no tags shown in chat
         "emotion": emotion,
-        "arc":     new_arc,   # send arc to frontend for visualization
+        "arc":     new_arc,
     })
 
-    # 6. Stream TTS audio
+    # 6. Stream TTS with the ORIGINAL tagged text for maximum expressiveness
     await _send(ws, {"type": "processing", "stage": "tts"})
-    await _stream_audio(ws, ai_text, emotion, lang, engine_key)
+    await _stream_audio(ws, ai_text, emotion, lang, engine_key)  # ← ai_text keeps the tags
 
 
 async def handle_websocket(ws: WebSocket) -> None:
