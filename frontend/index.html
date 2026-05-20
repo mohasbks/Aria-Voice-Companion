@@ -10,6 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Tajawal:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/style.css" />
+  <!-- Puter.js: Free, keyless ElevenLabs TTS -->
+  <script src="https://js.puter.com/v2/"></script>
 </head>
 
 <body>
@@ -173,8 +175,27 @@
 
         <div class="setting-group">
           <label>Groq API Key (Arabic)</label>
-          <input type="password" id="groq-key-ar-input" placeholder="gsk_..." />
-          <span class="setting-hint">Used if you want a separate account for Arabic TTS.</span>
+          <input type="password" id="groq-key-arabic" placeholder="gsk_..." autocomplete="off" />
+          <small>Used if you want a separate account for Arabic TTS.</small>
+
+          <!-- TTS Engine Selection -->
+          <div class="settings-section-title">🎙️ Voice Engine</div>
+          <div class="tts-mode-selector">
+            <label class="tts-option" id="tts-opt-backend">
+              <input type="radio" name="tts_mode" value="backend" id="tts-mode-backend" />
+              <span class="tts-label">
+                <strong>Orpheus / Deepgram</strong>
+                <small>Server-side — most expressive emotion tags</small>
+              </span>
+            </label>
+            <label class="tts-option" id="tts-opt-elevenlabs">
+              <input type="radio" name="tts_mode" value="elevenlabs" id="tts-mode-elevenlabs" />
+              <span class="tts-label">
+                <strong>✨ ElevenLabs (Free)</strong>
+                <small>via Puter.js — premium quality, no API key needed</small>
+              </span>
+            </label>
+          </div>
         </div>
         
         <div class="setting-group">

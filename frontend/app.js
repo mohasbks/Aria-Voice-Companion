@@ -84,9 +84,50 @@ const btnGroq         = document.getElementById('btn-groq');
 const waveBars        = document.getElementById('wave-bars');
 
 /* User Settings */
-let userLang = localStorage.getItem('aria_lang') || 'en';
-let userGroqKey = localStorage.getItem('aria_groq_key') || '';
+let userLang      = localStorage.getItem('aria_lang')     || 'en';
+let userGroqKey   = localStorage.getItem('aria_groq_key') || '';
 let userGroqKeyAr = localStorage.getItem('aria_groq_key_ar') || '';
+let ttsMode       = localStorage.getItem('aria_tts_mode') || 'backend'; // 'backend' | 'elevenlabs'
+
+// ElevenLabs voice IDs via Puter.js (public sample voices, no key needed)
+const EL_VOICES = {
+  calm:      '21m00Tcm4TlvDq8ikWAM',  // Rachel  — warm, steady
+  happy:     'EXAVITQu4vr4xnSDxMaL',  // Bella   — bright, expressive
+  excited:   'EXAVITQu4vr4xnSDxMaL',  // Bella   — energetic
+  sad:       '21m00Tcm4TlvDq8ikWAM',  // Rachel  — soft, gentle
+  serious:   '21m00Tcm4TlvDq8ikWAM',  // Rachel  — composed
+  angry:     'EXAVITQu4vr4xnSDxMaL',  // Bella   — intense
+  playful:   'MF3mGyEYCl7XYWbV9V6O',  // Elli    — lively, youthful
+  curious:   '21m00Tcm4TlvDq8ikWAM',  // Rachel  — thoughtful
+  surprised: 'EXAVITQu4vr4xnSDxMaL',  // Bella   — reactive
+};
+
+async function speakWithElevenLabs(text, emotion) {
+  if (typeof puter === 'undefined') {
+    console.warn('Puter.js not loaded — falling back to backend audio');
+    return false;
+  }
+  try {
+    const voiceId = EL_VOICES[emotion] || EL_VOICES.calm;
+    const audio = await puter.ai.txt2speech(text, {
+      provider: 'elevenlabs',
+      voice:    voiceId,
+      model:    'eleven_flash_v2_5',   // fastest for real-time chat
+    });
+    audio.play();
+    // Sync the aiAudio state for visualizer
+    aiAudio.onplay  = () => setAriaState('speaking');
+    aiAudio.onended = () => setAriaState('idle');
+    return true;
+  } catch (err) {
+    console.error('ElevenLabs TTS error:', err);
+    showToast('ElevenLabs needs a Puter account. Switched to backend TTS.', 'error', 4000);
+    ttsMode = 'backend';
+    localStorage.setItem('aria_tts_mode', 'backend');
+    document.getElementById('tts-mode-backend').checked = true;
+    return false;
+  }
+}
 
 /* ══════════════════════════════════════════════════════════════
    WEBSOCKET
@@ -107,8 +148,9 @@ function connectWS() {
       session_id: sessionId, 
       mime_type: getMimeType(),
       lang: userLang,
-      groq_key: userGroqKey,
-      groq_key_ar: userGroqKeyAr
+      groq_key:   userGroqKey,
+      groq_key_ar: userGroqKeyAr,
+      tts_mode:   ttsMode,   // tell backend to skip audio if frontend handles TTS
     });
     sessionDisplay.textContent = sessionId.slice(-8);
   };
@@ -179,10 +221,23 @@ function handleWSMessage(event) {
     case 'response':
       appendMessage('assistant', msg.text, msg.emotion);
       if (msg.arc && msg.arc.length) updateEmotionArc(msg.arc);
-      else if (msg.emotion) applyEmotionTheme(msg.emotion); // fallback if no arc yet
-      showActivity(true, '🔊 Generating voice…');
+      else if (msg.emotion) applyEmotionTheme(msg.emotion);
       currentEmotion = msg.emotion || 'calm';
-      binaryChunks = []; // reset audio buffer
+      binaryChunks = [];
+
+      if (ttsMode === 'elevenlabs') {
+        // Frontend handles TTS — call ElevenLabs directly via Puter.js
+        showActivity(true, '✨ ElevenLabs generating…');
+        speakWithElevenLabs(msg.text, currentEmotion).then(ok => {
+          showActivity(false);
+          if (!ok) {
+            // Puter auth required or failed — backend will still send audio
+            showActivity(true, '🔊 Generating voice…');
+          }
+        });
+      } else {
+        showActivity(true, '🔊 Generating voice…');
+      }
       break;
 
     case 'audio_start':
@@ -719,12 +774,13 @@ document.querySelectorAll('.tip').forEach(tip => {
    SETTINGS MODAL LOGIC
    ══════════════════════════════════════════════════════════════ */
 
-const settingsModal = document.getElementById('settings-modal');
+const settingsModal   = document.getElementById('settings-modal');
 const closeSettingsBtn = document.getElementById('close-settings-btn');
-const saveSettingsBtn = document.getElementById('save-settings-btn');
-const groqKeyInput = document.getElementById('groq-key-input');
-const groqKeyArInput = document.getElementById('groq-key-ar-input');
-const langBtns = document.querySelectorAll('.lang-btn');
+const saveSettingsBtn  = document.getElementById('save-settings-btn');
+const groqKeyInput    = document.getElementById('groq-key-input');
+const groqKeyArInput  = document.getElementById('groq-key-arabic');
+const langBtns        = document.querySelectorAll('.lang-btn');
+const ttsModeRadios   = document.querySelectorAll('input[name="tts_mode"]');
 
 function applyLangSelection(lang) {
   langBtns.forEach(btn => {
@@ -743,10 +799,12 @@ function updatePlaceholderByLang() {
 }
 
 settingsBtn.addEventListener('click', () => {
-  /* Load current values */
-  groqKeyInput.value = userGroqKey;
+  /* Load current values into modal */
+  groqKeyInput.value   = userGroqKey;
   groqKeyArInput.value = userGroqKeyAr;
   applyLangSelection(userLang);
+  // Restore TTS mode radio
+  ttsModeRadios.forEach(r => { r.checked = (r.value === ttsMode); });
   settingsModal.classList.add('active');
 });
 
@@ -764,27 +822,32 @@ saveSettingsBtn.addEventListener('click', () => {
   const selectedLang = Array.from(langBtns).find(b => b.classList.contains('active')).dataset.lang;
   const key1 = groqKeyInput.value.trim();
   const key2 = groqKeyArInput.value.trim();
+  const selectedTtsMode = document.querySelector('input[name="tts_mode"]:checked')?.value || 'backend';
 
   // Save to local state
-  userLang = selectedLang;
-  userGroqKey = key1;
+  userLang     = selectedLang;
+  userGroqKey  = key1;
   userGroqKeyAr = key2;
+  ttsMode      = selectedTtsMode;
 
   // Persist
-  localStorage.setItem('aria_lang', userLang);
-  localStorage.setItem('aria_groq_key', userGroqKey);
+  localStorage.setItem('aria_lang',       userLang);
+  localStorage.setItem('aria_groq_key',   userGroqKey);
   localStorage.setItem('aria_groq_key_ar', userGroqKeyAr);
+  localStorage.setItem('aria_tts_mode',   ttsMode);
 
-  // Tell backend live
+  // Tell backend live (backend skips audio streaming when tts_mode = elevenlabs)
   wsSend({
-    type: 'settings',
-    lang: userLang,
-    groq_key: userGroqKey,
-    groq_key_ar: userGroqKeyAr
+    type:        'settings',
+    lang:        userLang,
+    groq_key:    userGroqKey,
+    groq_key_ar: userGroqKeyAr,
+    tts_mode:    ttsMode,
   });
 
   updatePlaceholderByLang();
-  showToast('Settings saved successfully.', 'success');
+  const modeLabel = ttsMode === 'elevenlabs' ? '✨ ElevenLabs (Free)' : 'Orpheus / Deepgram';
+  showToast(`Settings saved. Voice engine: ${modeLabel}`, 'success');
   settingsModal.classList.remove('active');
 });
 

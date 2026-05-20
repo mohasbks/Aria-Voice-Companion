@@ -77,6 +77,7 @@ async def _run_pipeline(
     lang: str = "en",
     groq_api_key: str = "",
     groq_api_key_arabic: str = "",
+    tts_mode: str = "backend",   # 'backend' | 'elevenlabs' (frontend Puter.js)
 ) -> None:
     """
     Full STT→LLM→TTS pipeline for an already-transcribed user_text.
@@ -130,9 +131,13 @@ async def _run_pipeline(
         "arc":     new_arc,
     })
 
-    # 6. Stream TTS with the ORIGINAL tagged text for maximum expressiveness
-    await _send(ws, {"type": "processing", "stage": "tts"})
-    await _stream_audio(ws, ai_text, emotion, lang, engine_key)  # ← ai_text keeps the tags
+    # 6. Stream TTS audio — SKIP if frontend handles TTS (ElevenLabs via Puter.js)
+    if tts_mode != "elevenlabs":
+        await _send(ws, {"type": "processing", "stage": "tts"})
+        await _stream_audio(ws, ai_text, emotion, lang, engine_key)
+    else:
+        # Frontend already called Puter.js TTS on receiving the 'response' message
+        logger.info("TTS skipped — client using ElevenLabs (Puter.js)")
 
 
 async def handle_websocket(ws: WebSocket) -> None:
@@ -141,12 +146,12 @@ async def handle_websocket(ws: WebSocket) -> None:
     Handles both text (Web Speech API) and binary (Groq Whisper) frames.
     """
     await ws.accept()
-    session_id = "default"
-    mime_type  = "audio/webm"
-    # User session overrides (default to server .env if empty)
-    user_lang = "en"
-    user_groq_key = ""
+    session_id       = "default"
+    mime_type        = "audio/webm"
+    user_lang        = "en"
+    user_groq_key    = ""
     user_groq_key_ar = ""
+    tts_mode         = "backend"   # overridden by init/settings message
 
     logger.info("WebSocket connected")
 
@@ -183,26 +188,27 @@ async def handle_websocket(ws: WebSocket) -> None:
                 msg_type = data.get("type", "")
 
                 if msg_type == "init":
-                    session_id = data.get("session_id", "default")
-                    mime_type  = data.get("mime_type", "audio/webm")
-                    user_lang  = data.get("lang", "en")
-                    user_groq_key = data.get("groq_key", "")
+                    session_id       = data.get("session_id", "default")
+                    mime_type        = data.get("mime_type", "audio/webm")
+                    user_lang        = data.get("lang", "en")
+                    user_groq_key    = data.get("groq_key", "")
                     user_groq_key_ar = data.get("groq_key_ar", "")
-                    logger.info("Session: %s | mime: %s | lang: %s", session_id, mime_type, user_lang)
+                    tts_mode         = data.get("tts_mode", "backend")
+                    logger.info("Session: %s | mime: %s | lang: %s | tts: %s", session_id, mime_type, user_lang, tts_mode)
                     await _send(ws, {"type": "ready", "session_id": session_id})
 
                 elif msg_type == "settings":
-                    # Update session settings on the fly
-                    if "lang" in data: user_lang = data["lang"]
-                    if "groq_key" in data: user_groq_key = data["groq_key"]
+                    if "lang" in data:        user_lang        = data["lang"]
+                    if "groq_key" in data:    user_groq_key    = data["groq_key"]
                     if "groq_key_ar" in data: user_groq_key_ar = data["groq_key_ar"]
-                    logger.info("Settings updated: lang=%s", user_lang)
+                    if "tts_mode" in data:    tts_mode         = data["tts_mode"]
+                    logger.info("Settings updated: lang=%s tts=%s", user_lang, tts_mode)
 
                 elif msg_type == "text":
                     user_text  = data.get("text", "").strip()
                     session_id = data.get("session_id", session_id)
                     if user_text:
-                        await _run_pipeline(ws, user_text, session_id, user_lang, user_groq_key, user_groq_key_ar)
+                        await _run_pipeline(ws, user_text, session_id, user_lang, user_groq_key, user_groq_key_ar, tts_mode)
 
                 elif msg_type == "ping":
                     await _send(ws, {"type": "pong"})
@@ -223,7 +229,7 @@ async def handle_websocket(ws: WebSocket) -> None:
                     })
                     continue
 
-                await _run_pipeline(ws, user_text, session_id, user_lang, user_groq_key, user_groq_key_ar)
+                await _run_pipeline(ws, user_text, session_id, user_lang, user_groq_key, user_groq_key_ar, tts_mode)
 
     except Exception as exc:
         logger.error("WebSocket handler error: %s", exc)
