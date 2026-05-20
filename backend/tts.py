@@ -1,18 +1,18 @@
 """
-tts.py – Hybrid TTS: Orpheus-first with intelligent rate-limit handling.
+tts.py – Hybrid TTS: Orpheus → Deepgram Aura 2 → Edge-TTS.
 
 Pipeline:
-  1. Try Orpheus (tara/leah/jess) – best human-sounding voice
-  2. If 429 → mark rate-limited for 90s → fallback to Edge-TTS AvaNeural
-  3. After 90s cooldown → Orpheus tries again automatically
+  1. Orpheus (canopylabs/orpheus-v1-english) – most expressive, with emotion tags
+  2. If Orpheus 429 → Deepgram Aura 2 (high-quality, near-human fallback)
+  3. If Deepgram unavailable → Edge-TTS (last resort)
 
-Free Tier Reality:
-  - Groq Orpheus: ~5-10 audio requests per day on free tier
-  - When rate-limited (429) system auto-switches to Edge-TTS
-  - 90-second cooldown before retrying Orpheus
+Free Tier:
+  - Groq Orpheus: ~5-10 audio requests/day
+  - Deepgram: generous free tier (200 chars/request × many requests)
 """
 
 import os
+import re
 import time
 import struct
 import logging
@@ -25,12 +25,30 @@ from text_processor import normalize_text
 logger = logging.getLogger(__name__)
 
 # ── Groq / Orpheus Config ──────────────────────────────────────────────────
-GROQ_API_KEY   = os.getenv("GROQ_API_KEY", "")
+GROQ_API_KEY        = os.getenv("GROQ_API_KEY", "")
 GROQ_API_KEY_ARABIC = os.getenv("GROQ_API_KEY_ARABIC", "")
-ORPHEUS_URL    = "https://api.groq.com/openai/v1/audio/speech"
-ORPHEUS_MODEL_EN = "canopylabs/orpheus-v1-english"
-ORPHEUS_MODEL_AR = "canopylabs/orpheus-arabic-saudi"
-MAX_CHARS      = 450
+ORPHEUS_URL         = "https://api.groq.com/openai/v1/audio/speech"
+ORPHEUS_MODEL_EN    = "canopylabs/orpheus-v1-english"
+ORPHEUS_MODEL_AR    = "canopylabs/orpheus-arabic-saudi"
+MAX_CHARS           = 450
+
+# ── Deepgram Aura 2 Config ─────────────────────────────────────────────────
+DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
+DEEPGRAM_URL     = "https://api.deepgram.com/v1/speak"
+
+# Emotion → Deepgram Aura 2 voice + speed mapping
+# Voices chosen to match the emotional tone as closely as possible
+DEEPGRAM_VOICE_MAP = {
+    "calm":      {"model": "aura-2-luna-en",      "speed": 0.92},
+    "happy":     {"model": "aura-2-stella-en",    "speed": 1.12},
+    "excited":   {"model": "aura-2-stella-en",    "speed": 1.22},
+    "sad":       {"model": "aura-2-luna-en",      "speed": 0.82},
+    "serious":   {"model": "aura-2-athena-en",    "speed": 0.90},
+    "angry":     {"model": "aura-2-athena-en",    "speed": 1.10},
+    "playful":   {"model": "aura-2-stella-en",    "speed": 1.15},
+    "curious":   {"model": "aura-2-delia-en",     "speed": 1.02},
+    "surprised": {"model": "aura-2-delia-en",     "speed": 1.18},
+}
 
 # ── Engine state (module-level) ────────────────────────────────────────────
 # Once we know if Orpheus is available or rate-limited, LOCK that engine
@@ -202,16 +220,60 @@ def _merge_wavs(wav_list: list[bytes]) -> bytes:
     return bytes(header) + pcm
 
 
-# ── Edge-TTS Fallback ──────────────────────────────────────────────────────
-async def _edge_stream(text: str, emotion: str):
-    """Stream MP3 audio via Edge-TTS (bridge when Orpheus is rate-limited)."""
-    cfg = EDGE_MAP.get(emotion, EDGE_MAP["calm"])
+# ── Deepgram Aura 2 Fallback ──────────────────────────────────────────────
+_ORPHEUS_TAG_RE = re.compile(r'<(laugh|chuckle|sigh|gasp|sniffle|groan|cry|cough|yawn)>', re.IGNORECASE)
+
+async def _deepgram_stream(text: str, emotion: str):
+    """Stream MP3 audio via Deepgram Aura 2.
+    Strips Orpheus tags since Deepgram doesn't understand them.
+    """
+    if not DEEPGRAM_API_KEY:
+        return
+
+    cfg   = DEEPGRAM_VOICE_MAP.get(emotion, DEEPGRAM_VOICE_MAP["calm"])
+    model = cfg["model"]
+    speed = cfg["speed"]
+    clean_text = _ORPHEUS_TAG_RE.sub('', text).strip()
+
     logger.info(
-        "Edge-TTS (fallback) ▶ voice=%s rate=%s emotion=%s",
+        "Deepgram Aura 2 ▶ voice=%s speed=%.2f emotion=%s | '%s'",
+        model, speed, emotion, clean_text[:60]
+    )
+
+    params = {"model": model, "encoding": "mp3", "speed": str(speed)}
+    headers = {
+        "Authorization": f"Token {DEEPGRAM_API_KEY}",
+        "Content-Type":  "text/plain",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            async with client.stream(
+                "POST", DEEPGRAM_URL,
+                params=params, headers=headers, content=clean_text.encode()
+            ) as resp:
+                if resp.status_code != 200:
+                    body = await resp.aread()
+                    logger.error("Deepgram %d: %s", resp.status_code, body[:200])
+                    return
+                async for chunk in resp.aiter_bytes(8192):
+                    if chunk:
+                        yield chunk
+    except Exception as exc:
+        logger.error("Deepgram stream error: %s", exc)
+
+
+# ── Edge-TTS Last Resort ───────────────────────────────────────────────────
+async def _edge_stream(text: str, emotion: str):
+    """Stream MP3 audio via Edge-TTS (last resort only)."""
+    cfg = EDGE_MAP.get(emotion, EDGE_MAP["calm"])
+    clean_text = _ORPHEUS_TAG_RE.sub('', text).strip()
+    logger.info(
+        "Edge-TTS (last-resort) ▶ voice=%s rate=%s emotion=%s",
         cfg["voice"], cfg["rate"], emotion
     )
     communicate = edge_tts.Communicate(
-        text=text,
+        text=clean_text,
         voice=cfg["voice"],
         rate=cfg["rate"],
         pitch=cfg["pitch"],
@@ -224,11 +286,12 @@ async def _edge_stream(text: str, emotion: str):
 # ── Main TTS Generator ─────────────────────────────────────────────────────
 async def synthesize_speech_stream(text: str, emotion: str = "calm", lang: str = "en", engine_key: str = ""):
     """
-    Yields audio bytes over WebSocket.
+    Yields audio bytes.
 
-    Strategy:
-      • If Orpheus available (not rate-limited): collect WAV chunks → merge → stream
-      • If Orpheus rate-limited: stream MP3 via Edge-TTS AvaNeural directly
+    Priority:
+      1. Orpheus via Groq  (most expressive, emotion tags)
+      2. Deepgram Aura 2   (high-quality near-human fallback)
+      3. Edge-TTS          (last resort)
     """
     clean  = normalize_text(text)
     chunks = _split_chunks(clean)
@@ -257,15 +320,22 @@ async def synthesize_speech_stream(text: str, emotion: str = "calm", lang: str =
             for i in range(0, len(merged), 8192):
                 yield merged[i: i + 8192]
             return
-        # If all chunks failed → fall through to Edge-TTS
-        logger.warning("Orpheus returned nothing – using Edge-TTS fallback")
+        logger.warning("Orpheus returned nothing – trying Deepgram Aura 2")
 
-    # ── Edge-TTS fallback path ────────────────────────────────────────
-    logger.info(
-        "TTS ▶ Edge-TTS | emotion=%-9s | '%s'", emotion, clean[:70]
-    )
-    # Combine all chunks for edge-tts (it handles long text better as one)
+    # ── Deepgram Aura 2 fallback ──────────────────────────────────────────
     full_text = " ".join(chunks)
+    if DEEPGRAM_API_KEY:
+        logger.info("TTS ▶ Deepgram Aura 2 | emotion=%-9s | '%s'", emotion, clean[:60])
+        chunks_received = 0
+        async for data in _deepgram_stream(full_text, emotion):
+            chunks_received += 1
+            yield data
+        if chunks_received > 0:
+            return
+        logger.warning("Deepgram returned nothing – falling back to Edge-TTS")
+
+    # ── Edge-TTS last resort ──────────────────────────────────────────────
+    logger.info("TTS ▶ Edge-TTS (last resort) | emotion=%-9s | '%s'", emotion, clean[:60])
     async for data in _edge_stream(full_text, emotion):
         yield data
 
