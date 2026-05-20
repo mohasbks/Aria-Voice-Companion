@@ -152,6 +152,7 @@ async def get_llm_response(
         "temperature": 0.88,   # slightly creative for natural variety
         "max_tokens":  250,    # keep responses short — it's voice
         "stream":      False,
+        "response_format": {"type": "json_object"}
     }
 
     try:
@@ -182,18 +183,18 @@ async def get_llm_response(
 
         raw = resp.json()["choices"][0]["message"]["content"].strip()
 
-        # Strip markdown fences if model disobeys
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        raw = raw.strip()
-
-        # Robustly extract JSON even if model adds text before/after it
-        json_match = re.search(r'\{[^{}]*"text"[^{}]*"emotion"[^{}]*\}', raw, re.DOTALL)
-        if not json_match:
-            raise json.JSONDecodeError("No JSON found", raw, 0)
-        parsed   = json.loads(json_match.group())
+        # Robustly extract JSON
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            # Fallback if wrapped in markdown
+            import re
+            match = re.search(r'\{.*\}', raw, re.DOTALL)
+            if match:
+                parsed = json.loads(match.group())
+            else:
+                raise json.JSONDecodeError("No JSON found", raw, 0)
+        
         text     = str(parsed.get("text", "I'm not sure what to say..."))
         emotion  = str(parsed.get("emotion", "calm")).lower()
         if emotion not in VALID_EMOTIONS:
@@ -202,7 +203,7 @@ async def get_llm_response(
         return {"text": text, "emotion": emotion}
 
     except json.JSONDecodeError:
-        logger.error("JSON parse error | raw=%s", raw if 'raw' in dir() else "N/A")
+        logger.error("JSON parse error | raw=%s", raw if 'raw' in locals() else "N/A")
         return {"text": "Hmm... could you say that again?", "emotion": "calm"}
     except Exception as exc:
         logger.error("LLM error: %s", exc)

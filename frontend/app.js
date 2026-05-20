@@ -75,6 +75,7 @@ const activityText    = document.getElementById('activity-text');
 const textInput       = document.getElementById('text-input');
 const sendBtn         = document.getElementById('send-btn');
 const clearBtn        = document.getElementById('clear-btn');
+const newChatBtn      = document.getElementById('new-chat-btn');
 const settingsBtn     = document.getElementById('settings-btn');
 const aiAudio         = document.getElementById('ai-audio');
 const toastContainer  = document.getElementById('toast-container');
@@ -578,11 +579,26 @@ document.getElementById('mode-group').addEventListener('click', (e) => {
    ══════════════════════════════════════════════════════════════ */
 
 clearBtn.addEventListener('click', () => {
-  // Remove all messages except the welcome card
   const messages = chatWindow.querySelectorAll('.message');
   messages.forEach(m => m.remove());
   welcomeCard.style.display = '';
-  showToast('Chat cleared', 'success', 2000);
+  showToast('Display cleared', 'success', 2000);
+});
+
+newChatBtn.addEventListener('click', () => {
+  // Generate a fresh session ID so old memory doesn't bleed in
+  sessionId = `session_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+  localStorage.setItem('aria_session_id', sessionId);
+  sessionDisplay.textContent = sessionId.slice(-8);
+
+  // Clear displayed messages
+  chatWindow.querySelectorAll('.message').forEach(m => m.remove());
+  welcomeCard.style.display = '';
+
+  // Reconnect WS with new session
+  if (ws) ws.close();
+  connectWS();
+  showToast('New conversation started! 🌱', 'success', 3000);
 });
 
 /* ══════════════════════════════════════════════════════════════

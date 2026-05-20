@@ -443,6 +443,22 @@ body::after {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-top: auto;
+}
+
+.sidebar-action-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#new-chat-btn {
+  color: var(--accent);
+  opacity: 0.9;
+}
+#new-chat-btn:hover {
+  color: #fff;
+  opacity: 1;
 }
 
 .settings-btn {

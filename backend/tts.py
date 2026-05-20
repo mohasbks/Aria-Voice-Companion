@@ -41,8 +41,23 @@ ENGINE_LOCK_SECS    = 300           # 5 minutes = consistent voice per session
 RATE_LIMIT_COOLDOWN = 120           # seconds to wait after any 429
 
 
-# ── Emotion → Voice Mapping ────────────────────────────────────────────────
-# Orpheus English voices: autumn, diana, hannah, austin, daniel, troy
+# ── Emotion → Voice + Speed Mapping ──────────────────────────────────────
+# Orpheus supports a `speed` float (0.5–2.0) and emotion prefix tags:
+# <laugh>, <chuckle>, <sigh>, <gasp>, <cough>, <sniffle>, <groan>, <yawn>
+ORPHEUS_EMOTION_CFG = {
+    # emotion: (speed, text_prefix)
+    "calm":      (0.92,  ""),
+    "happy":     (1.15,  "<chuckle> "),
+    "excited":   (1.25,  "<laugh> "),
+    "sad":       (0.80,  "<sigh> "),
+    "serious":   (0.88,  ""),
+    "angry":     (1.15,  ""),
+    "playful":   (1.20,  "<chuckle> "),
+    "curious":   (1.05,  ""),
+    "surprised": (1.20,  "<gasp> "),
+}
+
+# Voice locked to hannah for all emotions
 ORPHEUS_MAP = {
     "calm":      {"voice": "hannah"},
     "happy":     {"voice": "hannah"},
@@ -107,8 +122,8 @@ def _split_chunks(text: str) -> list[str]:
 
 
 # ── Orpheus TTS ────────────────────────────────────────────────────────────
-async def _orpheus_chunk(text: str, voice: str, lang: str = "en", engine_key: str = "") -> bytes | None:
-    """Call Orpheus TTS API. Returns WAV bytes or None on failure."""
+async def _orpheus_chunk(text: str, voice: str, emotion: str = "calm", lang: str = "en", engine_key: str = "") -> bytes | None:
+    """Call Orpheus TTS API with emotion-aware speed and prefix tags."""
     api_key_to_use = engine_key
     model_to_use = ORPHEUS_MODEL_EN
 
@@ -131,11 +146,20 @@ async def _orpheus_chunk(text: str, voice: str, lang: str = "en", engine_key: st
         logger.warning(f"No API key for language {lang}")
         return None
 
+    # Apply emotion speed and prefix tag
+    speed, prefix = ORPHEUS_EMOTION_CFG.get(emotion, (1.0, ""))
+    # For Arabic, don't use English emotion tags
+    if lang == "ar":
+        prefix = ""
+        # Slightly slower for Arabic clarity
+        speed = min(speed, 1.05)
+    
     payload = {
         "model":           model_to_use,
-        "input":           text,
+        "input":           prefix + text,
         "voice":           voice,
         "response_format": "wav",
+        "speed":           speed,
     }
     headers = {
         "Authorization": f"Bearer {api_key_to_use}",
@@ -224,7 +248,7 @@ async def synthesize_speech_stream(text: str, emotion: str = "calm", lang: str =
 
         wav_parts = []
         for chunk in chunks:
-            wav = await _orpheus_chunk(chunk, voice, lang, engine_key)
+            wav = await _orpheus_chunk(chunk, voice, emotion, lang, engine_key)
             if wav:
                 wav_parts.append(wav)
             else:

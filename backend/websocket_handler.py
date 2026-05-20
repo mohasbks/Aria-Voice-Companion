@@ -89,8 +89,8 @@ async def _run_pipeline(
     if not await _send(ws, {"type": "transcript", "text": user_text}):
         return
 
-    # 2. Load conversation context from SQLite
-    history      = get_recent_messages(n=10, session_id=session_id)
+    # 2. Load conversation context from SQLite (max 6 recent turns = 3 exchanges)
+    history      = get_recent_messages(n=6, session_id=session_id)
     emotion_arc  = get_emotion_arc(n=6,  session_id=session_id)
     session_mood = get_session_mood(n=6,  session_id=session_id)
 
