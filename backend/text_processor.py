@@ -16,9 +16,19 @@ Rules:
 import re
 
 
-# ── Strip any XML/SSML that leaked in ────────────────────────────────────────
+# ── Strip any XML/SSML that leaked in — but PRESERVE Orpheus emotion tags ───
+# Orpheus-valid tags: <laugh> <chuckle> <sigh> <gasp> <sniffle> <groan> <cry> <cough> <yawn>
+_ORPHEUS_TAGS = {"laugh", "chuckle", "sigh", "gasp", "sniffle", "groan", "cry", "cough", "yawn"}
+
 def _strip_xml(text: str) -> str:
-    return re.sub(r'<[^>]+>', '', text)
+    """Remove all XML/HTML tags EXCEPT valid Orpheus paralinguistic tags."""
+    import re
+    def _replacer(m):
+        tag_name = re.match(r'</?(\w+)', m.group(0))
+        if tag_name and tag_name.group(1).lower() in _ORPHEUS_TAGS:
+            return m.group(0)  # keep it
+        return ''              # strip it
+    return re.sub(r'<[^>]+>', _replacer, text)
 
 
 # ── Convert ALL CAPS words to Title Case ──────────────────────────────────────

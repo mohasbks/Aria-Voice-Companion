@@ -45,16 +45,16 @@ RATE_LIMIT_COOLDOWN = 120           # seconds to wait after any 429
 # Orpheus supports a `speed` float (0.5–2.0) and emotion prefix tags:
 # <laugh>, <chuckle>, <sigh>, <gasp>, <cough>, <sniffle>, <groan>, <yawn>
 ORPHEUS_EMOTION_CFG = {
-    # emotion: (speed, text_prefix)
-    "calm":      (0.92,  ""),
-    "happy":     (1.15,  "<chuckle> "),
-    "excited":   (1.25,  "<laugh> "),
-    "sad":       (0.80,  "<sigh> "),
-    "serious":   (0.88,  ""),
-    "angry":     (1.15,  ""),
-    "playful":   (1.20,  "<chuckle> "),
-    "curious":   (1.05,  ""),
-    "surprised": (1.20,  "<gasp> "),
+    # emotion: speed (0.5–2.0). Tags are now injected by the LLM inline.
+    "calm":      (0.92,),
+    "happy":     (1.15,),
+    "excited":   (1.25,),
+    "sad":       (0.80,),
+    "serious":   (0.88,),
+    "angry":     (1.12,),
+    "playful":   (1.18,),
+    "curious":   (1.02,),
+    "surprised": (1.22,),
 }
 
 # Voice locked to hannah for all emotions
@@ -146,17 +146,15 @@ async def _orpheus_chunk(text: str, voice: str, emotion: str = "calm", lang: str
         logger.warning(f"No API key for language {lang}")
         return None
 
-    # Apply emotion speed and prefix tag
-    speed, prefix = ORPHEUS_EMOTION_CFG.get(emotion, (1.0, ""))
-    # For Arabic, don't use English emotion tags
+    # Apply emotion-based speed. Tags are embedded inline by the LLM.
+    speed = ORPHEUS_EMOTION_CFG.get(emotion, (1.0,))[0]
+    # Arabic: cap speed for clarity
     if lang == "ar":
-        prefix = ""
-        # Slightly slower for Arabic clarity
         speed = min(speed, 1.05)
-    
+
     payload = {
         "model":           model_to_use,
-        "input":           prefix + text,
+        "input":           text,
         "voice":           voice,
         "response_format": "wav",
         "speed":           speed,
