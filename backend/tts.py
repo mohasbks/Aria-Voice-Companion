@@ -37,17 +37,17 @@ DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY", "")
 DEEPGRAM_URL     = "https://api.deepgram.com/v1/speak"
 
 # Emotion → Deepgram Aura 2 voice + speed mapping
-# Voices chosen to match the emotional tone as closely as possible
+# Voices chosen from the official Aura-2 catalog to match the emotional tone
 DEEPGRAM_VOICE_MAP = {
     "calm":      {"model": "aura-2-luna-en",      "speed": 0.92},
-    "happy":     {"model": "aura-2-stella-en",    "speed": 1.12},
-    "excited":   {"model": "aura-2-stella-en",    "speed": 1.22},
+    "happy":     {"model": "aura-2-harmonia-en",  "speed": 1.12},
+    "excited":   {"model": "aura-2-electra-en",   "speed": 1.22},
     "sad":       {"model": "aura-2-luna-en",      "speed": 0.82},
     "serious":   {"model": "aura-2-athena-en",    "speed": 0.90},
     "angry":     {"model": "aura-2-athena-en",    "speed": 1.10},
-    "playful":   {"model": "aura-2-stella-en",    "speed": 1.15},
-    "curious":   {"model": "aura-2-delia-en",     "speed": 1.02},
-    "surprised": {"model": "aura-2-delia-en",     "speed": 1.18},
+    "playful":   {"model": "aura-2-thalia-en",    "speed": 1.15},
+    "curious":   {"model": "aura-2-theia-en",     "speed": 1.02},
+    "surprised": {"model": "aura-2-electra-en",   "speed": 1.18},
 }
 
 # ── Engine state (module-level) ────────────────────────────────────────────
