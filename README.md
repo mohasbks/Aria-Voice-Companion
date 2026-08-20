@@ -1,5 +1,3 @@
-![ARIA — Voice, emotion and bilingual intelligence](docs/brand-cover.png)
-
 <div align="center">
   <br>
   <!-- Beautiful Audio Wave / Glowing Orb representation -->
