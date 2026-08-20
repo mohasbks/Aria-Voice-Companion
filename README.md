@@ -66,7 +66,7 @@ Aria features a **neo-brutalist / old-money** UI inspired by luxury fluid design
 
 ### 1️⃣ Clone & Install
 ```bash
-git clone https://github.com/mohasbks/Aria-Voice-Companion.git
+git clone https://github.com/Almotasembellahawwad/Aria-Voice-Companion.git
 cd Aria-Voice-Companion/backend
 pip install -r requirements.txt
 ```
